@@ -10,6 +10,7 @@
 <script src="lib/tf.min.js"></script>
 <script src="lib/tone.min.js"></script>
 <script src="lib/mqtt.min.js"></script>
+<script src="lib/mediapipe/hands.js"></script>
 <style>
   :root {
     --tinta: #1a1838; --escenario: #221f47; --panel: #2a2754; --linea: #3d3970; --texto: #f4f2ff; --suave: #aba6d3;
@@ -46,6 +47,7 @@
   .visor { position: relative; aspect-ratio: 4 / 3; background: #141230; border-radius: 18px; overflow: hidden; }
   .visor video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: none; }
   .visor.viva video { display: block; }
+  .visor canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .visor .aro { position: absolute; inset: 0; border-radius: 18px; box-shadow: inset 0 0 0 0 transparent; transition: box-shadow .18s; pointer-events: none; }
   .visor .vacio { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--suave); }
   .visor.viva .vacio { display: none; }
@@ -185,8 +187,9 @@
     <div class="camara">
       <div class="visor" id="visor">
         <video id="cam" playsinline muted></video>
-        <div class="vacio"><div><p id="vacioTxt">Buscando tu modelo de gestos…</p>
+        <div class="vacio"><div><p id="vacioTxt">Enciende la cámara y muestra tu mano.</p>
           <button class="principal" id="btnCamara">Encender cámara</button></div></div>
+        <canvas id="trazo"></canvas>
         <div class="aro" id="aro"></div>
         <div class="lectura" id="lectura">Esperando un gesto</div>
       </div>
@@ -207,7 +210,7 @@
       <div class="estado">
         <span id="stSonido"><i></i>Sonido</span>
         <span id="stCamara"><i></i>Cámara</span>
-        <span id="stModelo"><i></i>Modelo</span>
+        <span id="stModelo"><i></i><span id="nombreDetector">Detector de mano</span></span>
         <span id="stVoz"><i></i>Voz</span>
         <span id="stMqtt"><i></i>Conexión al ESP32</span>
       </div>
@@ -238,7 +241,7 @@ const ORIGEN = { gesto: 'con un gesto', tablero: 'en las barras', teclado: 'con 
 const porNombre = Object.fromEntries(NOTAS.map((x, i) => [x.n, i]));
 const $ = id => document.getElementById(id);
 
-let args = { modelo_url: '', broker: '', topico: 'gestobeat_miguelruiz', umbral: 0.8, instrumento: 'piano' };
+let args = { reconocimiento: 'mano', modelo_url: '', broker: '', topico: 'gestobeat_miguelruiz', umbral: 0.8, instrumento: 'piano' };
 let instrumento = 'piano', modo = 'libre';
 let stats = { notas: 0, por_nota: {}, por_origen: {}, mejor_puntaje: 0, completas: 0, mqtt_enviados: 0, ultimas: [] };
 
@@ -260,12 +263,12 @@ window.addEventListener('message', ev => {
   const d = ev.data || {};
   if (d.type !== 'streamlit:render') return;
   const nuevos = Object.assign({}, args, d.args || {});
-  const cambioModelo = primeraVez || nuevos.modelo_url !== args.modelo_url;
+  const cambioModelo = primeraVez || nuevos.modelo_url !== args.modelo_url || nuevos.reconocimiento !== args.reconocimiento;
   const cambioMqtt = primeraVez || nuevos.broker !== args.broker || nuevos.topico !== args.topico;
   if (primeraVez) instrumento = nuevos.instrumento || 'piano';
   args = nuevos; primeraVez = false;
   marcarInstrumento();
-  if (cambioModelo) cargarModelo();
+  if (cambioModelo) { cargarModelo(); reiniciarCamara(); }
   if (cambioMqtt) conectarMqtt();
   ajustarAlto();
 });
@@ -472,8 +475,11 @@ $('btnEscuchar').onclick = escuchar;
 $('btnReiniciar').onclick = () => elegirMelodia(juego.m);
 $('btnSiguiente').onclick = () => elegirMelodia((juego.m + 1) % MELODIAS.length);
 
-// ───────────────────────── modelo de Teachable Machine (TensorFlow.js) ─────────────────────────
-let modelo = null, etiquetas = [], mapaNotas = [];
+// ───────────────────────── reconocimiento de gestos ─────────────────────────
+// Dos formas: «mano» usa MediaPipe Hands (21 puntos de la mano, cuenta los dedos levantados);
+// «modelo» usa el modelo de Teachable Machine entrenado con fotos de los gestos.
+let modelo = null, etiquetas = [], mapaNotas = [], manos = null, manosListas = false;
+const usaMano = () => (args.reconocimiento || 'mano') === 'mano';
 function normalizar(t) { return t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 function notaDeEtiqueta(et, i) {
   const n = normalizar(et);
@@ -482,51 +488,134 @@ function notaDeEtiqueta(et, i) {
   if (/nada|fondo|background|ninguno|vacio|neutral/.test(n)) return null;
   return i < NOTAS.length ? NOTAS[i].n : null;
 }
+function detectorListo() { return usaMano() ? manosListas : !!modelo; }
+
 async function cargarModelo() {
-  modelo = null; estado('stModelo', 'espera');
+  estado('stModelo', 'espera');
+  $('nombreDetector').textContent = usaMano() ? 'Detector de mano' : 'Modelo';
+  if (usaMano()) return prepararManos();
+  modelo = null;
   let base = (args.modelo_url || '').trim() || './modelo/';
   if (!base.endsWith('/')) base += '/';
-  $('vacioTxt').textContent = 'Buscando tu modelo de gestos…';
+  $('vacioTxt').textContent = 'Cargando tu modelo de Teachable Machine…';
   try {
     const meta = await (await fetch(base + 'metadata.json')).json();
     modelo = await tf.loadLayersModel(base + 'model.json');
     etiquetas = meta.labels || [];
     mapaNotas = etiquetas.map(notaDeEtiqueta);
     estado('stModelo', 'on');
-    $('vacioTxt').textContent = 'El modelo está listo. Enciende la cámara y haz un gesto.';
+    $('vacioTxt').textContent = 'Tu modelo está listo. Enciende la cámara y haz un gesto.';
     $('infoModelo').textContent = `Tu modelo reconoce: ${etiquetas.join(', ')}.`;
   } catch (e) {
     modelo = null; estado('stModelo', 'error');
-    $('vacioTxt').textContent = 'Aún no hay modelo de gestos. Pega el enlace de Teachable Machine en Ajustes; mientras tanto, toca con las barras.';
+    $('vacioTxt').textContent = 'No se pudo cargar el modelo. Revisa el enlace de Teachable Machine en Ajustes; mientras tanto, toca con las barras.';
     $('infoModelo').textContent = 'Sin modelo, la cámara no reconoce gestos.';
   }
 }
 
-// ───────────────────────── cámara y reconocimiento ─────────────────────────
-let stream = null, bucle = null, candidato = null, estable = 0, ultimoGesto = null;
+async function prepararManos() {
+  $('infoModelo').textContent = 'Haz el gesto con la palma hacia la cámara.';
+  $('vacioTxt').textContent = 'Enciende la cámara y muestra tu mano.';
+  if (manosListas) { estado('stModelo', 'on'); return; }
+  if (manos) return;
+  try {
+    manos = new Hands({ locateFile: f => 'lib/mediapipe/' + f });
+    manos.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5, selfieMode: true });
+    manos.onResults(resultadosMano);
+    await manos.initialize();
+    manosListas = true; estado('stModelo', 'on');
+  } catch (e) {
+    console.error(e); manos = null; estado('stModelo', 'error');
+    $('infoModelo').textContent = 'No se pudo iniciar el detector de mano. Recarga la página.';
+  }
+}
+
+// Qué gesto hace la mano, a partir de sus 21 puntos
+function clasificarMano(lm) {
+  const v = $('cam'), asp = (v.videoWidth || 4) / (v.videoHeight || 3);
+  const P = i => ({ x: lm[i].x * asp, y: lm[i].y });
+  const d = (a, b) => { const p = P(a), q = P(b); return Math.hypot(p.x - q.x, p.y - q.y); };
+  const palma = d(0, 9);
+  const levantado = (punta, nudillo) => d(0, punta) > d(0, nudillo) * 1.08;
+  const dedos = [levantado(8, 6), levantado(12, 10), levantado(16, 14), levantado(20, 18)];
+  const cuantos = dedos.filter(Boolean).length;
+  const pulgarFuera = d(4, 5) > palma * 0.6 && d(4, 9) > d(3, 9);
+  const pulgarArriba = pulgarFuera && (P(2).y - P(4).y) > palma * 0.55;
+  if (cuantos >= 4) return 'Do';
+  if (cuantos === 0) return pulgarArriba ? 'La' : 'Re';
+  if (dedos[0] && !dedos[1] && !dedos[2] && !dedos[3]) return 'Mi';
+  if (dedos[0] && dedos[1] && !dedos[2] && !dedos[3]) return 'Sol';
+  return null;
+}
+
+const UNIONES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+function dibujarMano(lm, color) {
+  const c = $('trazo'), ctx = c.getContext('2d');
+  const r = c.getBoundingClientRect();
+  if (c.width !== Math.round(r.width)) { c.width = Math.round(r.width); c.height = Math.round(r.height); }
+  ctx.clearRect(0, 0, c.width, c.height);
+  if (!lm) return;
+  // el video está recortado con object-fit: cover; ajustamos los puntos al recorte
+  const v = $('cam'), vw = v.videoWidth || 640, vh = v.videoHeight || 480;
+  const esc = Math.max(c.width / vw, c.height / vh), ox = (c.width - vw * esc) / 2, oy = (c.height - vh * esc) / 2;
+  const X = p => ox + p.x * vw * esc, Y = p => oy + p.y * vh * esc;
+  ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = color || 'rgba(244,242,255,0.75)';
+  UNIONES.forEach(([a, b]) => { ctx.beginPath(); ctx.moveTo(X(lm[a]), Y(lm[a])); ctx.lineTo(X(lm[b]), Y(lm[b])); ctx.stroke(); });
+  ctx.fillStyle = '#f4f2ff';
+  lm.forEach((p, i) => { ctx.beginPath(); ctx.arc(X(p), Y(p), [4, 8, 12, 16, 20].includes(i) ? 5 : 3, 0, Math.PI * 2); ctx.fill(); });
+}
+
+function resultadosMano(r) {
+  const lm = r.multiHandLandmarks && r.multiHandLandmarks[0];
+  if (!lm) { dibujarMano(null); gestoDetectado(null, 1, true); return; }
+  const nota = clasificarMano(lm);
+  dibujarMano(lm, nota ? NOTAS[porNombre[nota]].color : null);
+  gestoDetectado(nota, 1, false);
+}
+
+// ───────────────────────── cámara ─────────────────────────
+let stream = null, bucle = null, activa = false;
 async function encenderCamara() {
   await activarSonido();
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false });
     const v = $('cam'); v.srcObject = stream; await v.play();
     $('visor').classList.add('viva'); $('btnApagar').style.display = '';
-    estado('stCamara', 'on');
-    bucle = setInterval(predecir, 140);
+    estado('stCamara', 'on'); activa = true;
+    if (usaMano()) { await prepararManos(); cicloMano(); }
+    else bucle = setInterval(predecir, 140);
   } catch (e) {
     estado('stCamara', 'error');
     $('vacioTxt').textContent = 'No se pudo abrir la cámara. Dale permiso en el candado de la barra de direcciones.';
   }
 }
+let enviandoMano = false;
+async function cicloMano() {
+  if (!activa || !usaMano()) return;
+  const v = $('cam');
+  if (manosListas && v.videoWidth && !enviandoMano) {
+    enviandoMano = true;
+    try { await manos.send({ image: v }); } catch (e) { console.error(e); }
+    enviandoMano = false;
+  }
+  requestAnimationFrame(cicloMano);
+}
 function apagarCamara() {
-  clearInterval(bucle); bucle = null;
+  activa = false; clearInterval(bucle); bucle = null;
   if (stream) stream.getTracks().forEach(t => t.stop()); stream = null;
   $('visor').classList.remove('viva'); $('btnApagar').style.display = 'none';
-  estado('stCamara', '');
+  estado('stCamara', ''); dibujarMano(null);
   document.querySelectorAll('.gesto').forEach(g => { g.classList.remove('encendido'); g.querySelector('i').style.width = '0'; });
 }
+function reiniciarCamara() {   // si cambia la forma de reconocer con la cámara prendida
+  if (!activa) return;
+  clearInterval(bucle); bucle = null; dibujarMano(null);
+  if (usaMano()) prepararManos().then(cicloMano); else bucle = setInterval(predecir, 140);
+}
+
 let prediciendo = false;
 async function predecir() {
-  if (!modelo || prediciendo) return;
+  if (!modelo || prediciendo || usaMano()) return;
   const v = $('cam'); if (!v.videoWidth) return;
   prediciendo = true;
   try {
@@ -541,30 +630,47 @@ async function predecir() {
     const salida = modelo.predict(entrada);
     const probs = Array.from(await salida.data());
     entrada.dispose(); salida.dispose();
-    procesar(probs);
+    let im = 0; probs.forEach((p, i) => { if (p > probs[im]) im = i; });
+    const nota = mapaNotas[im], p = probs[im];
+    const umbral = Number(args.umbral) || 0.8;
+    const porNota = [0, 0, 0, 0, 0];
+    probs.forEach((q, i) => { const n = mapaNotas[i]; if (n) porNota[porNombre[n]] = Math.max(porNota[porNombre[n]], q); });
+    pintarBarrasGesto(porNota);
+    if (nota && p >= umbral) gestoDetectado(nota, p, false);
+    else gestoDetectado(null, p, !nota && p >= 0.6);
   } catch (e) { console.error(e); }
   prediciendo = false;
 }
-function procesar(probs) {
-  let im = 0; probs.forEach((p, i) => { if (p > probs[im]) im = i; });
-  const porNota = [0, 0, 0, 0, 0];
-  probs.forEach((p, i) => { const n = mapaNotas[i]; if (n) porNota[porNombre[n]] = Math.max(porNota[porNombre[n]], p); });
-  porNota.forEach((p, i) => {
+
+// ───────────────────────── de gesto a nota ─────────────────────────
+// La nota suena cuando el mismo gesto se mantiene unos cuadros seguidos. Para repetir la misma
+// nota hay que soltar el gesto: sacar la mano de la cámara o cambiar de forma un instante.
+let candidato = null, estable = 0, ultimoGesto = null, sinGesto = 0;
+function pintarBarrasGesto(valores) {
+  valores.forEach((p, i) => {
     const g = $('gesto' + i);
     g.querySelector('i').style.width = (p * 100).toFixed(0) + '%';
-    g.classList.toggle('encendido', p >= (Number(args.umbral) || 0.8));
+    g.classList.toggle('encendido', p >= 0.99 || (!usaMano() && p >= (Number(args.umbral) || 0.8)));
   });
-  const nota = mapaNotas[im], p = probs[im];
-  $('lectura').textContent = nota ? `${NOTAS[porNombre[nota]].gesto} ${nota}, ${(p * 100).toFixed(0)} %` : 'Esperando un gesto';
-  const umbral = Number(args.umbral) || 0.8;
-  if (nota && p >= umbral) {
+}
+function gestoDetectado(nota, conf, sinMano) {
+  const necesarios = usaMano() ? 3 : 2;
+  if (nota) {
+    sinGesto = 0;
     if (nota === candidato) estable++; else { candidato = nota; estable = 1; }
-    if (estable >= 2 && nota !== ultimoGesto) {
+    if (usaMano()) pintarBarrasGesto(NOTAS.map(x => x.n === nota ? Math.min(estable / necesarios, 1) : 0));
+    $('lectura').textContent = `${NOTAS[porNombre[nota]].gesto} ${nota}${usaMano() ? '' : ', ' + (conf * 100).toFixed(0) + ' %'}`;
+    if (estable >= necesarios && nota !== ultimoGesto) {
       ultimoGesto = nota; tocar(nota, 'gesto');
       const aro = $('aro'); aro.style.boxShadow = `inset 0 0 0 5px ${NOTAS[porNombre[nota]].color}`;
       setTimeout(() => aro.style.boxShadow = 'inset 0 0 0 0 transparent', 280);
     }
-  } else if (!nota && p >= 0.6) { ultimoGesto = null; candidato = null; estable = 0; }
+  } else {
+    candidato = null; estable = 0; sinGesto++;
+    if (usaMano()) pintarBarrasGesto([0, 0, 0, 0, 0]);
+    $('lectura').textContent = sinMano ? 'Muestra tu mano' : 'Gesto no reconocido';
+    if ((sinMano && sinGesto >= 2) || sinGesto >= 5) ultimoGesto = null;
+  }
 }
 $('btnCamara').onclick = encenderCamara;
 $('btnApagar').onclick = apagarCamara;

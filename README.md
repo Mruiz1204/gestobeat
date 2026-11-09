@@ -18,7 +18,7 @@ en Wokwi enciende el LED de cada nota y la toca en su buzzer.
 
 | Modalidad | Tipo | Tecnología |
 |---|---|---|
-| Gestos de la mano | Entrada | Teachable Machine + TensorFlow.js (en el navegador) |
+| Gestos de la mano | Entrada | Detector de mano MediaPipe Hands (21 puntos, cuenta los dedos) o el modelo de Teachable Machine con TensorFlow.js |
 | Tablero y teclado | Entrada | Franjas táctiles y teclas 1–5 |
 | Voz | Entrada | Web Speech API («piano», «guitarra», «marimba», «juego», «escuchar», «do re mi»…) |
 | Sonido | Salida | Tone.js, escala pentatónica |
@@ -29,7 +29,7 @@ en Wokwi enciende el LED de cada nota y la toca en su buzzer.
 
 - `Inicio.py`: la app de Streamlit (panel lateral, resumen de la sesión, ayudas).
 - `componente/index.html`: el instrumento. Cámara, modelo, sonido, voz y MQTT corren en el navegador para que la música no se corte.
-- `componente/lib/`: TensorFlow.js, Tone.js y mqtt.js incluidos en el repositorio.
+- `componente/lib/`: TensorFlow.js, MediaPipe Hands, Tone.js y mqtt.js incluidos en el repositorio.
 - `wokwi/`: `sketch.ino`, `diagram.json` y `libraries.txt` del ESP32.
 
 ## Desplegar

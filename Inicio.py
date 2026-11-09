@@ -30,15 +30,22 @@ ORIGEN = {"gesto": "con gestos", "tablero": "en las barras", "teclado": "con el 
 # AJUSTES (panel lateral)
 # ─────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### Modelo de gestos")
+    st.markdown("### Reconocer los gestos")
+    forma = st.radio(
+        "Cómo reconoce la cámara tus gestos",
+        ["Detector de mano", "Mi modelo de Teachable Machine"],
+        help="El detector de mano ubica los 21 puntos de tu mano y cuenta los dedos levantados: funciona con "
+             "cualquier fondo y luz. El modelo de Teachable Machine usa las fotos con las que lo entrenaste.",
+    )
+    reconocimiento = "mano" if forma == "Detector de mano" else "modelo"
     modelo_url = st.text_input(
         "Enlace de Teachable Machine",
         value="https://teachablemachine.withgoogle.com/models/0SuhMwLNA/",
-        placeholder="https://teachablemachine.withgoogle.com/models/…/",
+        placeholder="https://teachablemachine.withgoogle.com/models/…/", disabled=reconocimiento == "mano",
         help="En Teachable Machine: Exportar modelo → Tensorflow.js → Subir mi modelo. "
              "Si lo dejas vacío, la app busca el modelo en la carpeta componente/modelo del repositorio.",
     )
-    umbral = st.slider("Seguridad para tocar la nota", 0.5, 0.99, 0.80, 0.01,
+    umbral = st.slider("Seguridad del modelo para tocar la nota", 0.5, 0.99, 0.75, 0.01, disabled=reconocimiento == "mano",
                        help="La nota solo suena si el modelo está así de seguro del gesto. "
                             "Súbela si suenan notas de más; bájala si cuesta que reconozca tus gestos.")
     st.divider()
@@ -56,7 +63,7 @@ with st.sidebar:
 # ─────────────────────────────────────────────
 marca("Cada gesto de tu mano es una nota afinada. Toca libre o imita melodías, y mira cómo el ESP32 las acompaña con luces.")
 
-estado = _gestobeat(modelo_url=modelo_url, umbral=umbral, instrumento=instrumento,
+estado = _gestobeat(reconocimiento=reconocimiento, modelo_url=modelo_url, umbral=umbral, instrumento=instrumento,
                     broker=broker, topico=topico, key="gestobeat", default=None) or {}
 
 # ─────────────────────────────────────────────
@@ -106,8 +113,9 @@ st.markdown('<h3 class="ayudas-titulo">Antes de tocar</h3>', unsafe_allow_html=T
 
 with st.expander("Cómo se toca"):
     st.markdown(f"""
-- **Con gestos:** enciende la cámara y haz el gesto un instante. ✋ mano abierta es Do, ✊ puño es Re, ☝️ un dedo es Mi,
-  ✌️ dos dedos es Sol y 👍 pulgar arriba es La. Para repetir la misma nota, baja la mano y vuelve a hacer el gesto.
+- **Con gestos:** enciende la cámara y haz el gesto un instante con la palma hacia la cámara. ✋ mano abierta es Do,
+  ✊ puño es Re, ☝️ un dedo es Mi, ✌️ dos dedos es Sol y 👍 pulgar arriba es La. Sobre tu mano se dibujan sus 21 puntos
+  y se pintan del color de la nota cuando la reconoce. Para repetir la misma nota, saca la mano de la cámara un instante.
 - **Con las barras o el teclado:** toca las barras de colores o usa las teclas 1 a 5.
 - **Con la voz:** activa la voz y di «piano», «guitarra» o «marimba» para cambiar el sonido; «juego», «escuchar» u
   «otra melodía» para el juego, o las notas, como «do mi sol».
