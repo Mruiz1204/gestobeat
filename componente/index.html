@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GestoBeat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="lib/tf.min.js"></script>
+<script src="lib/tone.min.js"></script>
+<script src="lib/mqtt.min.js"></script>
+<style>
+  :root {
+    --fondo: #14303d; --card: #1d3f4e; --card2: #24485a; --borde: rgba(242,204,143,0.15);
+    --terracota: #e07a5f; --ambar: #f2cc8f; --texto: #e8eef0; --suave: #a9c0ca; --verde: #7bd88f;
+    --do: #e85d4a; --re: #f2994a; --mi: #f2cc8f; --sol: #7bd88f; --la: #6fb3d2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; color: var(--texto); font-family: 'Inter', sans-serif; }
+  .app { padding: 2px 2px 10px; }
+  h3 { font-family: 'Montserrat', sans-serif; color: var(--terracota); font-size: 1.05rem; margin: 0 0 4px; }
+  .sub { color: var(--suave); font-size: 0.85rem; margin: 0 0 12px; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  button { font-family: 'Montserrat', sans-serif; cursor: pointer; }
+
+  /* barra de estado */
+  .estado { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; background: var(--card2); border: 1px solid var(--borde);
+          border-radius: 20px; padding: 5px 13px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--suave); }
+  .chip i { width: 8px; height: 8px; border-radius: 50%; background: #50707e; display: inline-block; }
+  .chip.on { color: var(--texto); } .chip.on i { background: var(--verde); box-shadow: 0 0 8px var(--verde); }
+  .chip.warn i { background: var(--ambar); } .chip.err i { background: var(--terracota); }
+
+  /* controles */
+  .controles { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;
+               background: var(--card); border: 1px solid var(--borde); border-radius: 14px; padding: 12px 16px; margin-bottom: 16px; }
+  .grupo { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .grupo small { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--suave); text-transform: uppercase;
+                 letter-spacing: 1px; margin-right: 4px; }
+  .seg { background: var(--card2); color: var(--texto); border: 1px solid var(--borde); border-radius: 8px;
+         padding: 8px 14px; font-weight: 600; font-size: 0.85rem; transition: all .15s ease; }
+  .seg:hover { background: #2c5568; }
+  .seg.activo { background: var(--terracota); border-color: var(--terracota); color: #fff; }
+  .seg.voz.activo { background: #2f6b4f; border-color: var(--verde); }
+
+  /* rejilla */
+  .grid { display: grid; grid-template-columns: 1fr 1.05fr; gap: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--borde); border-radius: 14px; padding: 18px 20px;
+          box-shadow: 0 4px 18px rgba(0,0,0,0.2); }
+
+  /* cámara */
+  .video { position: relative; aspect-ratio: 4 / 3; background: #0f2530; border-radius: 12px; overflow: hidden;
+           border: 1px solid var(--borde); display: grid; place-items: center; }
+  .video video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: none; }
+  .video.viva video { display: block; }
+  .video .vacio { text-align: center; padding: 20px; color: var(--suave); font-size: 0.88rem; }
+  .video .vacio b { display: block; font-size: 2.6rem; margin-bottom: 6px; }
+  .video .marco { position: absolute; inset: 0; border: 4px solid transparent; border-radius: 12px; transition: border-color .15s; pointer-events: none; }
+  .video .etiqueta { position: absolute; left: 12px; top: 12px; background: rgba(20,48,61,0.85); border: 1px solid var(--borde);
+                     border-radius: 8px; padding: 4px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; display: none; }
+  .video.viva .etiqueta { display: block; }
+  .btn { background: var(--terracota); color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700;
+         font-size: 0.88rem; margin-top: 12px; }
+  .btn:hover { background: #c9583c; }
+  .btn.sec { background: var(--card2); border: 1px solid var(--borde); }
+  .barras { margin-top: 12px; }
+  .barra { display: grid; grid-template-columns: 90px 1fr 46px; gap: 8px; align-items: center; margin: 5px 0; font-size: 0.8rem; }
+  .barra .t { height: 8px; background: var(--card2); border-radius: 5px; overflow: hidden; }
+  .barra .t div { height: 100%; width: 0; border-radius: 5px; background: linear-gradient(90deg, var(--terracota), var(--ambar)); transition: width .12s; }
+  .barra b { font-family: 'IBM Plex Mono', monospace; color: var(--ambar); text-align: right; font-weight: 500; }
+
+  /* nota actual */
+  .nota { display: flex; align-items: center; gap: 18px; background: var(--card2); border: 1px solid var(--borde);
+          border-left: 5px solid var(--ambar); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .nota .grande { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 2.6rem; line-height: 1; min-width: 92px; color: var(--ambar); }
+  .nota small { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--suave); text-transform: uppercase; letter-spacing: 1px; }
+  .nota span { font-size: 0.92rem; }
+  .nota.pulso { animation: pulso .35s ease; }
+  @keyframes pulso { 0% { transform: scale(1); } 40% { transform: scale(1.025); } 100% { transform: scale(1); } }
+
+  /* tablero */
+  .tablero { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; height: 230px; user-select: none; touch-action: none; }
+  .franja { border-radius: 10px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+            padding-bottom: 12px; color: #14303d; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.15rem;
+            border: 2px solid rgba(255,255,255,0.15); transition: transform .08s, filter .08s, box-shadow .08s; cursor: pointer; }
+  .franja kbd { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; font-weight: 500; opacity: .75; margin-top: 4px; }
+  .franja:nth-child(1) { height: 100%; } .franja:nth-child(2) { height: 92%; } .franja:nth-child(3) { height: 84%; }
+  .franja:nth-child(4) { height: 76%; } .franja:nth-child(5) { height: 68%; }
+  .tablero { align-items: end; }
+  .franja.golpe { transform: scale(0.95); filter: brightness(1.25); box-shadow: 0 0 26px currentColor; }
+
+  /* leds */
+  .leds { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; background: #14303d; border: 1px solid var(--borde);
+          border-radius: 10px; padding: 10px 14px; align-items: center; }
+  .leds small { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--suave); }
+  .led { width: 18px; height: 18px; border-radius: 50%; opacity: .22; transition: opacity .1s, box-shadow .1s; }
+  .led.on { opacity: 1; box-shadow: 0 0 16px currentColor, 0 0 4px currentColor; }
+  .payload { margin-top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem; color: var(--ambar);
+             background: #14303d; border: 1px solid var(--borde); border-radius: 8px; padding: 7px 11px; word-break: break-word; }
+
+  /* juego */
+  .juego { margin-bottom: 16px; display: none; }
+  .juego.visible { display: block; }
+  .juego-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+  .marcador { display: flex; gap: 10px; }
+  .marcador div { background: var(--card2); border: 1px solid var(--borde); border-top: 3px solid var(--terracota); border-radius: 10px;
+                  padding: 8px 14px; min-width: 92px; }
+  .marcador small { display: block; font-size: 0.68rem; color: var(--suave); text-transform: uppercase; letter-spacing: .6px; font-weight: 600; }
+  .marcador b { font-family: 'Montserrat', sans-serif; color: var(--ambar); font-size: 1.3rem; }
+  .burbujas { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0 10px; min-height: 58px; }
+  .burbuja { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; font-family: 'Montserrat', sans-serif;
+             font-weight: 800; color: #14303d; font-size: 0.95rem; opacity: .35; border: 3px solid transparent; transition: all .15s; }
+  .burbuja.actual { opacity: 1; border-color: #fff; transform: scale(1.1); }
+  .burbuja.hecha { opacity: 1; }
+  .burbuja.hecha::after { content: '✓'; position: absolute; }
+  .burbuja.demo { opacity: 1; transform: scale(1.15); box-shadow: 0 0 20px currentColor; }
+  .burbuja.mal { animation: sacudir .35s; }
+  @keyframes sacudir { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  .mensaje { font-size: 0.92rem; min-height: 22px; }
+  .mensaje.ok { color: var(--verde); } .mensaje.no { color: var(--terracota); } .mensaje.info { color: var(--ambar); }
+
+  /* guía de gestos */
+  .guia { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+  .gesto { background: var(--card2); border: 1px solid var(--borde); border-radius: 10px; padding: 8px 4px; text-align: center; }
+  .gesto .e { font-size: 1.6rem; display: block; }
+  .gesto b { font-family: 'Montserrat', sans-serif; font-size: 0.85rem; }
+  .gesto small { display: block; font-size: 0.66rem; color: var(--suave); }
+  .voz-texto { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--suave); margin-top: 8px; min-height: 18px; }
+
+  /* portada de inicio */
+  .portada { position: fixed; inset: 0; background: rgba(20,48,61,0.94); display: grid; place-items: center; z-index: 10; text-align: center; padding: 20px; }
+  .portada.oculta { display: none; }
+  .portada h2 { font-family: 'Montserrat', sans-serif; color: var(--ambar); font-size: 1.7rem; margin: 10px 0 6px; }
+  .portada p { color: var(--suave); max-width: 420px; margin: 0 auto 18px; font-size: 0.92rem; line-height: 1.5; }
+  .portada .notas { display: flex; gap: 8px; justify-content: center; }
+  .portada .notas span { width: 16px; height: 48px; border-radius: 6px; display: inline-block; animation: sube 1.2s ease-in-out infinite; }
+  .portada .notas span:nth-child(2) { animation-delay: .15s; } .portada .notas span:nth-child(3) { animation-delay: .3s; }
+  .portada .notas span:nth-child(4) { animation-delay: .45s; } .portada .notas span:nth-child(5) { animation-delay: .6s; }
+  @keyframes sube { 50% { transform: scaleY(0.55); } }
+  .portada .btn { font-size: 1rem; padding: 13px 28px; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <div class="portada" id="portada">
+    <div>
+      <div class="notas"><span style="background:var(--do)"></span><span style="background:var(--re)"></span><span style="background:var(--mi)"></span><span style="background:var(--sol)"></span><span style="background:var(--la)"></span></div>
+      <h2>Tu mano es el instrumento</h2>
+      <p>El navegador necesita un clic para poder sonar. Después podrás tocar con gestos, con el tablero, con el teclado o con la voz.</p>
+      <button class="btn" id="btnEmpezar">▶ Empezar a tocar</button>
+    </div>
+  </div>
+
+  <div class="estado">
+    <span class="chip" id="stSonido"><i></i>sonido</span>
+    <span class="chip" id="stCamara"><i></i>cámara</span>
+    <span class="chip" id="stModelo"><i></i>modelo</span>
+    <span class="chip" id="stVoz"><i></i>voz</span>
+    <span class="chip" id="stMqtt"><i></i>mqtt</span>
+  </div>
+
+  <div class="controles">
+    <div class="grupo"><small>modo</small>
+      <button class="seg activo" data-modo="libre">🎹 Tocar libre</button>
+      <button class="seg" data-modo="juego">🎮 Imita la melodía</button>
+    </div>
+    <div class="grupo"><small>instrumento</small>
+      <button class="seg" data-inst="piano">Piano</button>
+      <button class="seg" data-inst="guitarra">Guitarra</button>
+      <button class="seg" data-inst="marimba">Marimba</button>
+    </div>
+    <div class="grupo">
+      <button class="seg voz" id="btnVoz">🎙️ Voz apagada</button>
+    </div>
+  </div>
+
+  <section class="card juego" id="juego">
+    <div class="juego-top">
+      <div>
+        <h3>🎮 Imita la melodía</h3>
+        <p class="sub">Escucha la melodía y repítela nota por nota con gestos, el tablero o el teclado.</p>
+        <div class="grupo" id="melodias"></div>
+      </div>
+      <div class="marcador">
+        <div><small>Puntaje</small><b id="puntaje">0</b></div>
+        <div><small>Racha</small><b id="racha">0</b></div>
+        <div><small>Completas</small><b id="completas">0</b></div>
+      </div>
+    </div>
+    <div class="burbujas" id="burbujas"></div>
+    <div class="mensaje info" id="mensaje">Presiona «Escuchar» o di «escuchar».</div>
+    <button class="btn" id="btnEscuchar">🔊 Escuchar</button>
+    <button class="btn sec" id="btnReiniciar">↺ Reiniciar</button>
+    <button class="btn sec" id="btnSiguiente">Siguiente ›</button>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h3>📷 Tocar con gestos</h3>
+      <p class="sub" id="subCamara">Haz un gesto frente a la cámara y suena su nota.</p>
+      <div class="video" id="video">
+        <video id="cam" playsinline muted></video>
+        <div class="vacio" id="vacio"><b>🖐️</b><span id="vacioTxt">Cargando el modelo...</span></div>
+        <div class="marco" id="marco"></div>
+        <div class="etiqueta" id="etiqueta">—</div>
+      </div>
+      <button class="btn" id="btnCamara">📷 Activar cámara</button>
+      <div class="barras" id="barras"></div>
+      <div class="guia" id="guia"></div>
+    </section>
+
+    <section class="card">
+      <h3>🎵 Escenario</h3>
+      <p class="sub">También puedes tocar las franjas, usar las teclas <span class="mono">1–5</span> o decir la nota.</p>
+      <div class="nota" id="nota">
+        <div class="grande" id="notaGrande">—</div>
+        <div><small>Última nota</small><span id="notaInfo">Todavía no has tocado</span></div>
+      </div>
+      <div class="tablero" id="tablero"></div>
+      <div class="leds"><small>ESP32</small><span id="leds" style="display:flex; gap:18px;"></span><small id="mqttCuenta">0 msg</small></div>
+      <div class="payload" id="payload">tópico: —</div>
+      <div class="voz-texto" id="vozTexto"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+// ───────────────────────── datos ─────────────────────────
+const NOTAS = [
+  { n: 'Do',  f: 'C4', color: '#e85d4a', tecla: '1', gesto: '✋', desc: 'mano abierta' },
+  { n: 'Re',  f: 'D4', color: '#f2994a', tecla: '2', gesto: '✊', desc: 'puño' },
+  { n: 'Mi',  f: 'E4', color: '#f2cc8f', tecla: '3', gesto: '☝️', desc: 'un dedo' },
+  { n: 'Sol', f: 'G4', color: '#7bd88f', tecla: '4', gesto: '✌️', desc: 'dos dedos' },
+  { n: 'La',  f: 'A4', color: '#6fb3d2', tecla: '5', gesto: '👍', desc: 'pulgar arriba' },
+];
+const TECLAS = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, a: 0, s: 1, d: 2, f: 3, g: 4 };
+const MELODIAS = [
+  { id: 'escalera',   nombre: 'La escalera', notas: ['Do', 'Re', 'Mi', 'Sol', 'La', 'Sol', 'Mi'] },
+  { id: 'campanitas', nombre: 'Campanitas',  notas: ['Mi', 'Re', 'Do', 'Re', 'Mi', 'Mi', 'Mi'] },
+  { id: 'estrellita', nombre: 'Estrellita',  notas: ['Do', 'Do', 'Sol', 'Sol', 'La', 'La', 'Sol'] },
+];
+const porNombre = Object.fromEntries(NOTAS.map((x, i) => [x.n, i]));
+const $ = id => document.getElementById(id);
+
+let args = { modelo_url: '', broker: '', topico: 'gestobeat_miguelruiz', umbral: 0.8, instrumento: 'piano' };
+let instrumento = 'piano', modo = 'libre';
+let stats = { notas: 0, por_nota: {}, por_origen: {}, mejor_puntaje: 0, completas: 0, mqtt_enviados: 0, ultimas: [] };
+
+// ───────────────────────── Streamlit (protocolo de componentes) ─────────────────────────
+function aStreamlit(type, data) { window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, data || {}), '*'); }
+let altoPrevio = 0;
+function ajustarAlto() {
+  const h = Math.ceil(document.getElementById('app').getBoundingClientRect().height) + 8;
+  if (h !== altoPrevio) { altoPrevio = h; aStreamlit('streamlit:setFrameHeight', { height: h }); }
+}
+new ResizeObserver(ajustarAlto).observe(document.getElementById('app'));
+let envioPendiente = null;
+function enviarStats() {
+  if (envioPendiente) return;
+  envioPendiente = setTimeout(() => { envioPendiente = null; aStreamlit('streamlit:setComponentValue', { value: stats, dataType: 'json' }); }, 1200);
+}
+let primeraVez = true;
+window.addEventListener('message', ev => {
+  const d = ev.data || {};
+  if (d.type !== 'streamlit:render') return;
+  const nuevos = Object.assign({}, args, d.args || {});
+  const cambioModelo = primeraVez || nuevos.modelo_url !== args.modelo_url;
+  const cambioMqtt = primeraVez || nuevos.broker !== args.broker || nuevos.topico !== args.topico;
+  if (primeraVez) instrumento = nuevos.instrumento || 'piano';
+  args = nuevos;
+  primeraVez = false;
+  marcarInstrumento();
+  if (cambioModelo) cargarModelo();
+  if (cambioMqtt) conectarMqtt();
+  ajustarAlto();
+});
+aStreamlit('streamlit:componentReady', { apiVersion: 1 });
+
+function chip(id, clase) { const c = $(id); c.className = 'chip ' + (clase || ''); }
+
+// ───────────────────────── sonido (Tone.js) ─────────────────────────
+let sintes = null, sonidoListo = false;
+function crearSintes() {
+  const reverb = new Tone.Reverb({ decay: 1.8, wet: 0.18 }).toDestination();
+  const pianoRespaldo = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.6, sustain: 0.15, release: 1.2 }, volume: -6,
+  }).connect(reverb);
+  const piano = new Tone.Sampler({
+    urls: { C4: 'C4.mp3', 'D#4': 'Ds4.mp3', 'F#4': 'Fs4.mp3', A4: 'A4.mp3' },
+    baseUrl: 'https://tonejs.github.io/audio/salamander/', release: 1.2,
+    onerror: () => { piano._fallo = true; },
+  }).connect(reverb);
+  const guitarra = new Tone.PolySynth(Tone.FMSynth, {
+    harmonicity: 2, modulationIndex: 3, oscillator: { type: 'triangle' },
+    envelope: { attack: 0.002, decay: 0.9, sustain: 0.05, release: 0.9 },
+    modulationEnvelope: { attack: 0.002, decay: 0.25, sustain: 0, release: 0.2 }, volume: -8,
+  }).connect(reverb);
+  const marimba = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.45, sustain: 0, release: 0.4 }, volume: -2,
+  }).connect(reverb);
+  sintes = { piano, pianoRespaldo, guitarra, marimba };
+}
+async function activarSonido() {
+  if (sonidoListo) return;
+  await Tone.start();
+  crearSintes();
+  sonidoListo = true;
+  chip('stSonido', 'on');
+}
+function sonar(nota, dur = '8n') {
+  if (!sonidoListo) return;
+  const f = NOTAS[porNombre[nota]].f;
+  let s = sintes[instrumento];
+  if (instrumento === 'piano' && (!sintes.piano.loaded || sintes.piano._fallo)) s = sintes.pianoRespaldo;
+  if (instrumento === 'piano') f && s.triggerAttackRelease(f, '4n');
+  else s.triggerAttackRelease(instrumento === 'marimba' ? f.replace('4', '5') : f.replace('4', '3'), dur);
+}
+
+// ───────────────────────── MQTT por websockets ─────────────────────────
+let cliente = null, mqttListo = false;
+function conectarMqtt() {
+  if (cliente) { try { cliente.end(true); } catch (e) {} cliente = null; }
+  mqttListo = false;
+  if (!args.broker) { chip('stMqtt', 'warn'); return; }
+  chip('stMqtt', 'warn');
+  try {
+    cliente = mqtt.connect(args.broker, { clientId: 'gestobeat-' + Math.random().toString(16).slice(2, 8),
+                                          reconnectPeriod: 4000, connectTimeout: 8000, clean: true });
+    cliente.on('connect', () => { mqttListo = true; chip('stMqtt', 'on'); });
+    cliente.on('close', () => { mqttListo = false; chip('stMqtt', 'err'); });
+    cliente.on('error', () => { mqttListo = false; chip('stMqtt', 'err'); });
+  } catch (e) { chip('stMqtt', 'err'); }
+  $('payload').textContent = 'tópico: ' + args.topico;
+}
+function publicar(nota) {
+  const msg = JSON.stringify({ nota, instrumento });
+  $('payload').textContent = 'tópico: ' + args.topico + '  →  ' + msg;
+  if (cliente && mqttListo) {
+    cliente.publish(args.topico, msg, { qos: 0 });
+    stats.mqtt_enviados++;
+    $('mqttCuenta').textContent = stats.mqtt_enviados + ' msg';
+  }
+}
+
+// ───────────────────────── tocar una nota ─────────────────────────
+function tocar(nota, origen, opciones = {}) {
+  if (!(nota in porNombre)) return;
+  sonar(nota);
+  publicar(nota);
+  const i = porNombre[nota], x = NOTAS[i];
+  const caja = $('nota');
+  $('notaGrande').textContent = nota;
+  $('notaGrande').style.color = x.color;
+  caja.style.borderLeftColor = x.color;
+  $('notaInfo').textContent = origen === 'demo' ? 'Escucha la melodía...' : `${instrumento} · con ${origen}`;
+  caja.classList.remove('pulso'); void caja.offsetWidth; caja.classList.add('pulso');
+  const fr = document.querySelectorAll('.franja')[i];
+  fr.classList.add('golpe'); setTimeout(() => fr.classList.remove('golpe'), 160);
+  const led = document.querySelectorAll('.led')[i];
+  led.classList.add('on'); setTimeout(() => led.classList.remove('on'), 260);
+  if (origen === 'demo') return;
+  stats.notas++;
+  stats.por_nota[nota] = (stats.por_nota[nota] || 0) + 1;
+  stats.por_origen[origen] = (stats.por_origen[origen] || 0) + 1;
+  stats.ultimas.unshift({ nota, origen, instrumento, hora: new Date().toLocaleTimeString('es-CO', { hour12: false }) });
+  stats.ultimas = stats.ultimas.slice(0, 8);
+  if (modo === 'juego') revisarJuego(nota);
+  enviarStats();
+}
+
+// ───────────────────────── tablero, LEDs y guía ─────────────────────────
+NOTAS.forEach((x, i) => {
+  const f = document.createElement('div');
+  f.className = 'franja'; f.style.background = x.color; f.style.color = x.color;
+  f.innerHTML = `<span style="color:#14303d">${x.n}</span><kbd style="color:#14303d">${x.tecla}</kbd>`;
+  f.addEventListener('pointerdown', e => { e.preventDefault(); tocar(x.n, 'tablero'); });
+  $('tablero').appendChild(f);
+  const l = document.createElement('span'); l.className = 'led'; l.style.background = x.color; l.style.color = x.color;
+  $('leds').appendChild(l);
+  const g = document.createElement('div'); g.className = 'gesto';
+  g.innerHTML = `<span class="e">${x.gesto}</span><b style="color:${x.color}">${x.n}</b><small>${x.desc}</small>`;
+  $('guia').appendChild(g);
+});
+document.addEventListener('keydown', e => {
+  if (e.repeat || e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  if (k in TECLAS) { activarSonido().then(() => tocar(NOTAS[TECLAS[k]].n, 'teclado')); }
+});
+
+// ───────────────────────── modos e instrumentos ─────────────────────────
+function marcarInstrumento() {
+  document.querySelectorAll('[data-inst]').forEach(b => b.classList.toggle('activo', b.dataset.inst === instrumento));
+}
+function cambiarInstrumento(nuevo) { instrumento = nuevo; marcarInstrumento(); }
+function cambiarModo(nuevo) {
+  modo = nuevo;
+  document.querySelectorAll('[data-modo]').forEach(b => b.classList.toggle('activo', b.dataset.modo === modo));
+  $('juego').classList.toggle('visible', modo === 'juego');
+  if (modo === 'juego') pintarJuego();
+}
+document.querySelectorAll('[data-inst]').forEach(b => b.onclick = () => cambiarInstrumento(b.dataset.inst));
+document.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => cambiarModo(b.dataset.modo));
+
+// ───────────────────────── juego «Imita la melodía» ─────────────────────────
+let juego = { m: 0, pos: 0, puntaje: 0, racha: 0, completas: 0, escuchando: false, transicion: false };
+MELODIAS.forEach((m, i) => {
+  const b = document.createElement('button'); b.className = 'seg'; b.textContent = m.nombre; b.dataset.mel = i;
+  b.onclick = () => { juego.m = i; juego.pos = 0; pintarJuego(); mensaje('Presiona «Escuchar» para oírla.', 'info'); };
+  $('melodias').appendChild(b);
+});
+function mensaje(t, clase) { const m = $('mensaje'); m.textContent = t; m.className = 'mensaje ' + clase; }
+function pintarJuego() {
+  const mel = MELODIAS[juego.m];
+  document.querySelectorAll('[data-mel]').forEach(b => b.classList.toggle('activo', +b.dataset.mel === juego.m));
+  $('burbujas').innerHTML = mel.notas.map((n, i) =>
+    `<div class="burbuja ${i < juego.pos ? 'hecha' : ''} ${i === juego.pos ? 'actual' : ''}" style="background:${NOTAS[porNombre[n]].color};color:${NOTAS[porNombre[n]].color}"><span style="color:#14303d">${n}</span></div>`).join('');
+  $('puntaje').textContent = juego.puntaje; $('racha').textContent = juego.racha; $('completas').textContent = juego.completas;
+}
+async function escuchar() {
+  if (juego.escuchando) return;
+  await activarSonido();
+  juego.escuchando = true; juego.pos = 0; pintarJuego();
+  mensaje('Escucha con atención...', 'info');
+  const mel = MELODIAS[juego.m].notas, bs = document.querySelectorAll('.burbuja');
+  for (let i = 0; i < mel.length; i++) {
+    bs[i].classList.add('demo'); tocar(mel[i], 'demo');
+    await new Promise(r => setTimeout(r, 560));
+    bs[i].classList.remove('demo');
+  }
+  juego.escuchando = false; pintarJuego();
+  mensaje('¡Tu turno! Toca la primera nota.', 'info');
+}
+function revisarJuego(nota) {
+  if (juego.escuchando || juego.transicion) return;
+  const mel = MELODIAS[juego.m].notas, esperada = mel[juego.pos];
+  if (nota === esperada) {
+    juego.racha++; juego.puntaje += 10 + (juego.racha - 1) * 2; juego.pos++;
+    if (juego.pos >= mel.length) {
+      juego.puntaje += 50; juego.completas++;
+      mensaje(`¡Melodía completa! +50 puntos. Racha de ${juego.racha}.`, 'ok');
+      pintarJuego(); juego.transicion = true;
+      setTimeout(() => { juego.transicion = false; juego.m = (juego.m + 1) % MELODIAS.length; juego.pos = 0; pintarJuego();
+                         mensaje(`Siguiente: ${MELODIAS[juego.m].nombre}. Presiona «Escuchar».`, 'info'); }, 1800);
+    } else {
+      mensaje(`¡Bien! Ahora sigue ${mel[juego.pos]}${mel[juego.pos] === nota ? ' otra vez (baja la mano y repite el gesto)' : ''}.`, 'ok');
+      pintarJuego();
+    }
+  } else {
+    juego.racha = 0; pintarJuego();
+    const b = document.querySelectorAll('.burbuja')[juego.pos]; if (b) { b.classList.add('mal'); }
+    mensaje(`Sonó ${nota}, pero tocaba ${esperada}. ¡Intenta otra vez!`, 'no');
+  }
+  stats.mejor_puntaje = Math.max(stats.mejor_puntaje, juego.puntaje);
+  stats.completas = juego.completas;
+}
+$('btnEscuchar').onclick = escuchar;
+$('btnReiniciar').onclick = () => { juego.pos = 0; juego.racha = 0; pintarJuego(); mensaje('Desde el principio. Presiona «Escuchar».', 'info'); };
+$('btnSiguiente').onclick = () => { juego.m = (juego.m + 1) % MELODIAS.length; juego.pos = 0; pintarJuego(); mensaje('Presiona «Escuchar» para oírla.', 'info'); };
+
+// ───────────────────────── modelo de Teachable Machine (TensorFlow.js) ─────────────────────────
+let modelo = null, etiquetas = [], mapaNotas = [];
+function normalizar(t) { return t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function notaDeEtiqueta(et, i) {
+  const n = normalizar(et);
+  const m = n.match(/\b(do|re|mi|sol|la)\b/);
+  if (m) return m[1][0].toUpperCase() + m[1].slice(1);
+  if (/nada|fondo|background|ninguno|vacio|neutral/.test(n)) return null;
+  return i < NOTAS.length ? NOTAS[i].n : null;
+}
+async function cargarModelo() {
+  modelo = null; chip('stModelo', 'warn');
+  let base = (args.modelo_url || '').trim() || './modelo/';
+  if (!base.endsWith('/')) base += '/';
+  $('vacioTxt').textContent = 'Cargando el modelo...';
+  try {
+    const meta = await (await fetch(base + 'metadata.json')).json();
+    modelo = await tf.loadLayersModel(base + 'model.json');
+    etiquetas = meta.labels || [];
+    mapaNotas = etiquetas.map(notaDeEtiqueta);
+    chip('stModelo', 'on');
+    $('subCamara').textContent = `Modelo con ${etiquetas.length} clases: ${etiquetas.join(', ')}.`;
+    $('vacioTxt').textContent = 'Modelo listo. Activa la cámara y haz un gesto.';
+    pintarBarras();
+  } catch (e) {
+    modelo = null; chip('stModelo', 'err');
+    $('subCamara').textContent = 'Todavía no hay modelo: puedes tocar con el tablero, el teclado o la voz.';
+    $('vacioTxt').innerHTML = 'No encontré el modelo.<br>Pega el enlace de Teachable Machine en el panel lateral.';
+  }
+}
+function pintarBarras() {
+  $('barras').innerHTML = etiquetas.map((e, i) =>
+    `<div class="barra"><span>${e}</span><div class="t"><div id="pb${i}"></div></div><b id="pv${i}">0%</b></div>`).join('');
+  ajustarAlto();
+}
+
+// ───────────────────────── cámara y reconocimiento ─────────────────────────
+let stream = null, bucle = null, candidato = null, estable = 0, ultimoGesto = null;
+async function activarCamara() {
+  await activarSonido();
+  if (stream) { apagarCamara(); return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false });
+    const v = $('cam'); v.srcObject = stream; await v.play();
+    $('video').classList.add('viva'); $('vacio').style.display = 'none';
+    chip('stCamara', 'on'); $('btnCamara').textContent = '⏹ Apagar cámara';
+    bucle = setInterval(predecir, 140);
+  } catch (e) {
+    chip('stCamara', 'err');
+    $('vacioTxt').textContent = 'No pude abrir la cámara. Revisa el permiso del navegador.';
+  }
+}
+function apagarCamara() {
+  clearInterval(bucle); bucle = null;
+  stream.getTracks().forEach(t => t.stop()); stream = null;
+  $('video').classList.remove('viva'); $('vacio').style.display = 'block';
+  chip('stCamara', ''); $('btnCamara').textContent = '📷 Activar cámara';
+}
+let prediciendo = false;
+async function predecir() {
+  if (!modelo || prediciendo) return;
+  const v = $('cam'); if (!v.videoWidth) return;
+  prediciendo = true;
+  try {
+    const entrada = tf.tidy(() => {
+      let t = tf.browser.fromPixels(v);
+      const [h, w] = t.shape, s = Math.min(h, w);
+      t = t.slice([Math.floor((h - s) / 2), Math.floor((w - s) / 2), 0], [s, s, 3]);
+      t = tf.image.resizeBilinear(t, [224, 224]);
+      t = tf.reverse(t, 1);                       // espejo, igual que la webcam de Teachable Machine
+      return t.toFloat().div(127.5).sub(1).expandDims(0);
+    });
+    const salida = modelo.predict(entrada);
+    const probs = Array.from(await salida.data());
+    entrada.dispose(); salida.dispose();
+    procesar(probs);
+  } catch (e) { console.error(e); }
+  prediciendo = false;
+}
+function procesar(probs) {
+  let im = 0; probs.forEach((p, i) => { if (p > probs[im]) im = i; });
+  probs.forEach((p, i) => {
+    const b = $('pb' + i), t = $('pv' + i);
+    if (b) { b.style.width = (p * 100).toFixed(0) + '%'; t.textContent = (p * 100).toFixed(0) + '%'; }
+  });
+  const nota = mapaNotas[im], p = probs[im];
+  $('etiqueta').textContent = `${etiquetas[im]} · ${(p * 100).toFixed(0)}%`;
+  const umbral = Number(args.umbral) || 0.8;
+  if (nota && p >= umbral) {
+    if (nota === candidato) estable++; else { candidato = nota; estable = 1; }
+    if (estable >= 2 && nota !== ultimoGesto) {
+      ultimoGesto = nota; tocar(nota, 'gesto');
+      $('marco').style.borderColor = NOTAS[porNombre[nota]].color;
+      setTimeout(() => $('marco').style.borderColor = 'transparent', 300);
+    }
+  } else if (!nota && p >= 0.6) { ultimoGesto = null; candidato = null; estable = 0; }
+}
+$('btnCamara').onclick = activarCamara;
+
+// ───────────────────────── voz (Web Speech API) ─────────────────────────
+const Reconocedor = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, vozActiva = false;
+function comandoDeVoz(texto) {
+  const t = normalizar(texto).trim();
+  $('vozTexto').textContent = '🎙️ «' + texto.trim() + '»';
+  if (/piano/.test(t)) return cambiarInstrumento('piano');
+  if (/guitarra/.test(t)) return cambiarInstrumento('guitarra');
+  if (/marimba|xilofono/.test(t)) return cambiarInstrumento('marimba');
+  if (/juego|jugar|imita/.test(t)) return cambiarModo('juego');
+  if (/libre/.test(t)) return cambiarModo('libre');
+  if (/escuch|repite|otra vez/.test(t)) { if (modo !== 'juego') cambiarModo('juego'); return escuchar(); }
+  if (/siguiente/.test(t)) return $('btnSiguiente').click();
+  const palabras = t.split(/\s+/);
+  const notas = palabras.map(w => ({ do: 'Do', re: 'Re', mi: 'Mi', sol: 'Sol', la: 'La' })[w]);
+  if (notas.length && notas.every(Boolean)) notas.forEach((n, i) => setTimeout(() => tocar(n, 'voz'), i * 380));
+}
+function alternarVoz() {
+  if (!Reconocedor) { chip('stVoz', 'err'); $('vozTexto').textContent = 'Este navegador no reconoce voz. Usa Chrome.'; return; }
+  activarSonido();
+  vozActiva = !vozActiva;
+  $('btnVoz').classList.toggle('activo', vozActiva);
+  $('btnVoz').textContent = vozActiva ? '🎙️ Escuchando...' : '🎙️ Voz apagada';
+  if (vozActiva) {
+    rec = new Reconocedor(); rec.lang = 'es-CO'; rec.continuous = true; rec.interimResults = false;
+    rec.onresult = e => comandoDeVoz(e.results[e.results.length - 1][0].transcript);
+    rec.onerror = e => { if (e.error === 'not-allowed') { vozActiva = false; chip('stVoz', 'err'); $('vozTexto').textContent = 'Permiso de micrófono negado.'; } };
+    rec.onend = () => { if (vozActiva) { try { rec.start(); } catch (e) {} } else chip('stVoz', ''); };
+    rec.start(); chip('stVoz', 'on');
+    $('vozTexto').textContent = 'Di: «guitarra», «juego», «escuchar» o una nota («do», «mi»...)';
+  } else { rec && rec.stop(); chip('stVoz', ''); }
+}
+$('btnVoz').onclick = alternarVoz;
+
+// ───────────────────────── inicio ─────────────────────────
+$('btnEmpezar').onclick = async () => { await activarSonido(); $('portada').classList.add('oculta'); };
+pintarJuego(); marcarInstrumento();
+</script>
+</body>
+</html>
