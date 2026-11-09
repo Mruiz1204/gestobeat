@@ -45,7 +45,7 @@ with st.sidebar:
     instrumento = st.selectbox("Instrumento al abrir", ["piano", "guitarra", "marimba"], format_func=str.capitalize)
     st.divider()
     st.markdown("### Conexión con el ESP32")
-    broker = st.text_input("Broker MQTT (websocket)", value="wss://broker.mqttdashboard.com:8884/mqtt",
+    broker = st.text_input("Broker MQTT (websocket)", value="wss://broker.hivemq.com:8884/mqtt",
                            help="El navegador entra por websocket seguro; el ESP32 de Wokwi usa el mismo broker por el puerto 1883.")
     topico = st.text_input("Tópico", value="gestobeat_miguelruiz",
                            help="Tiene que ser el mismo tópico al que se suscribe el ESP32 en Wokwi.")

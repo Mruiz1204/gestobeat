@@ -21,7 +21,7 @@
 
 const char* ssid = "Wokwi-GUEST";
 const char* password = "";
-const char* mqtt_server = "broker.mqttdashboard.com";
+const char* mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 1883;
 const char* topico = "gestobeat_miguelruiz";
 
