@@ -227,7 +227,7 @@ const NOTAS = [
   { n: 'Do',  f: 'C4', color: '#e8413c', tecla: '1', gesto: '✋', desc: 'mano abierta', paso: -2 },
   { n: 'Re',  f: 'D4', color: '#f5922f', tecla: '2', gesto: '✊', desc: 'puño',         paso: -1 },
   { n: 'Mi',  f: 'E4', color: '#f7d23e', tecla: '3', gesto: '☝️', desc: 'un dedo',      paso: 0 },
-  { n: 'Fa',  f: 'F4', color: '#9ccc3c', tecla: '4', gesto: '🤟', desc: 'tres dedos',   paso: 1 },
+  { n: 'Fa',  f: 'F4', color: '#9ccc3c', tecla: '4', gesto: '🤟', desc: 'índice y meñique, o tres dedos', paso: 1 },
   { n: 'Sol', f: 'G4', color: '#2a9d6f', tecla: '5', gesto: '✌️', desc: 'dos dedos',    paso: 2 },
   { n: 'La',  f: 'A4', color: '#8e5cd9', tecla: '6', gesto: '👍', desc: 'pulgar arriba', paso: 3 },
 ];
@@ -546,7 +546,8 @@ function clasificarMano(lm) {
   if (cuantos === 0) return pulgarArriba ? 'La' : 'Re';
   if (dedos[0] && !dedos[1] && !dedos[2] && !dedos[3]) return 'Mi';
   if (dedos[0] && dedos[1] && !dedos[2] && !dedos[3]) return 'Sol';
-  if (dedos[0] && dedos[1] && dedos[2] && !dedos[3]) return 'Fa';
+  if (dedos[0] && dedos[1] && dedos[2] && !dedos[3]) return 'Fa';      // tres dedos
+  if (dedos[0] && !dedos[1] && !dedos[2] && dedos[3]) return 'Fa';     // 🤟 índice y meñique
   return null;
 }
 
@@ -567,12 +568,20 @@ function dibujarMano(lm, color) {
   lm.forEach((p, i) => { ctx.beginPath(); ctx.arc(X(p), Y(p), [4, 8, 12, 16, 20].includes(i) ? 5 : 3, 0, Math.PI * 2); ctx.fill(); });
 }
 
+function dedosVistos(lm) {
+  const P = i => lm[i], d = (a, b) => Math.hypot(P(a).x - P(b).x, P(a).y - P(b).y);
+  const nombres = ['índice', 'medio', 'anular', 'meñique'];
+  const arriba = [[8, 6], [12, 10], [16, 14], [20, 18]].map(([t, k]) => d(0, t) > d(0, k) * 1.08);
+  const lista = nombres.filter((_, i) => arriba[i]);
+  return lista.length ? 'Veo ' + lista.join(', ') : 'Veo la mano cerrada';
+}
 function resultadosMano(r) {
   const lm = r.multiHandLandmarks && r.multiHandLandmarks[0];
   if (!lm) { dibujarMano(null); gestoDetectado(null, 1, true); return; }
   const nota = clasificarMano(lm);
   dibujarMano(lm, nota ? NOTAS[porNombre[nota]].color : null);
   gestoDetectado(nota, 1, false);
+  if (!nota) $('lectura').textContent = dedosVistos(lm) + ': no es un gesto';
 }
 
 // ───────────────────────── cámara ─────────────────────────
@@ -670,7 +679,7 @@ function gestoDetectado(nota, conf, sinMano) {
   } else {
     candidato = null; estable = 0; sinGesto++;
     if (usaMano()) pintarBarrasGesto(NOTAS.map(() => 0));
-    $('lectura').textContent = sinMano ? 'Muestra tu mano' : 'Gesto no reconocido';
+    $('lectura').textContent = sinMano ? 'Muestra tu mano' : (usaMano() ? 'Gesto no reconocido' : 'Tu modelo no está seguro del gesto');
     if ((sinMano && sinGesto >= 2) || sinGesto >= 5) ultimoGesto = null;
   }
 }

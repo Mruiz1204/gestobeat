@@ -114,7 +114,7 @@ st.markdown('<h3 class="ayudas-titulo">Antes de tocar</h3>', unsafe_allow_html=T
 with st.expander("Cómo se toca"):
     st.markdown(f"""
 - **Con gestos:** enciende la cámara y haz el gesto un instante con la palma hacia la cámara. ✋ mano abierta es Do,
-  ✊ puño es Re, ☝️ un dedo es Mi, 🤟 tres dedos (índice, medio y anular) es Fa, ✌️ dos dedos es Sol y 👍 pulgar arriba es La. Sobre tu mano se dibujan sus 21 puntos
+  ✊ puño es Re, ☝️ un dedo es Mi, 🤟 índice y meñique (o tres dedos: índice, medio y anular) es Fa, ✌️ dos dedos es Sol y 👍 pulgar arriba es La. Sobre tu mano se dibujan sus 21 puntos
   y se pintan del color de la nota cuando la reconoce. Para repetir la misma nota, saca la mano de la cámara un instante.
 - **Con las barras o el teclado:** toca las barras de colores o usa las teclas 1 a 6.
 - **Con la voz:** activa la voz y di «piano», «guitarra» o «marimba» para cambiar el sonido; «juego», «escuchar» u
