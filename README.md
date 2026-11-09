@@ -11,7 +11,7 @@ en Wokwi enciende el LED de cada nota y la toca en su buzzer.
 | ✋ mano abierta | Do | rojo (GPIO 13) |
 | ✊ puño | Re | naranja (GPIO 12) |
 | ☝️ un dedo | Mi | amarillo (GPIO 14) |
-| 🤟 tres dedos | Fa | verde limón (GPIO 33) |
+| 🤟 pulgar, índice y meñique | Fa | verde limón (GPIO 33) |
 | ✌️ dos dedos | Sol | verde (GPIO 27) |
 | 👍 pulgar arriba | La | morado (GPIO 26) |
 

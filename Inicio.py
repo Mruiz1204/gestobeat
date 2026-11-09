@@ -114,7 +114,7 @@ st.markdown('<h3 class="ayudas-titulo">Antes de tocar</h3>', unsafe_allow_html=T
 with st.expander("Cómo se toca"):
     st.markdown(f"""
 - **Con gestos:** enciende la cámara y haz el gesto un instante con la palma hacia la cámara. ✋ mano abierta es Do,
-  ✊ puño es Re, ☝️ un dedo es Mi, 🤟 índice y meñique (o tres dedos: índice, medio y anular) es Fa, ✌️ dos dedos es Sol y 👍 pulgar arriba es La. Sobre tu mano se dibujan sus 21 puntos
+  ✊ puño es Re, ☝️ un dedo es Mi, 🤟 pulgar, índice y meñique es Fa, ✌️ dos dedos es Sol y 👍 pulgar arriba es La. Sobre tu mano se dibujan sus 21 puntos
   y se pintan del color de la nota cuando la reconoce. Para repetir la misma nota, saca la mano de la cámara un instante.
 - **Con las barras o el teclado:** toca las barras de colores o usa las teclas 1 a 6.
 - **Con la voz:** activa la voz y di «piano», «guitarra» o «marimba» para cambiar el sonido; «juego», «escuchar» u
@@ -127,7 +127,7 @@ with st.expander("Entrenar el modelo de gestos en Teachable Machine"):
     st.markdown("""
 1. Entra a **teachablemachine.withgoogle.com**, elige *Proyecto de imagen* y luego *Modelo de imagen estándar*.
 2. Crea siete clases con estos nombres: `Do`, `Re`, `Mi`, `Fa`, `Sol`, `La` y `Nada`.
-3. Graba unas 150 fotos por clase con la webcam: ✋ mano abierta, ✊ puño, ☝️ un dedo, 🤟 tres dedos, ✌️ dos dedos y 👍 pulgar arriba.
+3. Graba unas 150 fotos por clase con la webcam: ✋ mano abierta, ✊ puño, ☝️ un dedo, 🤟 pulgar, índice y meñique, ✌️ dos dedos y 👍 pulgar arriba.
    En `Nada` graba tu cara y el fondo sin la mano. Cambia un poco la distancia y el ángulo mientras grabas.
 4. Entrena el modelo y pruébalo en la vista previa.
 5. Ve a *Exportar modelo*, pestaña *Tensorflow.js*, y elige *Subir mi modelo*. Copia el enlace.

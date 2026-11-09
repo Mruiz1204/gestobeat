@@ -61,7 +61,7 @@
   .secundario:hover { border-color: var(--suave); }
   .gestos { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 14px; }
   .gesto { text-align: center; padding: 8px 2px 6px; border-radius: 12px; }
-  .gesto span { font-size: 1.5rem; display: block; line-height: 1.2; }
+  .gesto span { font-size: 1.5rem; display: flex; align-items: center; justify-content: center; height: 1.85rem; line-height: 1; }
   .gesto b { font-family: var(--display); font-size: 0.95rem; }
   .gesto .p { height: 4px; background: var(--linea); border-radius: 2px; margin: 6px 8px 0; overflow: hidden; }
   .gesto .p i { display: block; height: 100%; width: 0; transition: width .12s; }
@@ -227,7 +227,7 @@ const NOTAS = [
   { n: 'Do',  f: 'C4', color: '#e8413c', tecla: '1', gesto: '✋', desc: 'mano abierta', paso: -2 },
   { n: 'Re',  f: 'D4', color: '#f5922f', tecla: '2', gesto: '✊', desc: 'puño',         paso: -1 },
   { n: 'Mi',  f: 'E4', color: '#f7d23e', tecla: '3', gesto: '☝️', desc: 'un dedo',      paso: 0 },
-  { n: 'Fa',  f: 'F4', color: '#9ccc3c', tecla: '4', gesto: '🤟', desc: 'índice y meñique, o tres dedos', paso: 1 },
+  { n: 'Fa',  f: 'F4', color: '#9ccc3c', tecla: '4', gesto: '🤟', desc: 'pulgar, índice y meñique', paso: 1 },
   { n: 'Sol', f: 'G4', color: '#2a9d6f', tecla: '5', gesto: '✌️', desc: 'dos dedos',    paso: 2 },
   { n: 'La',  f: 'A4', color: '#8e5cd9', tecla: '6', gesto: '👍', desc: 'pulgar arriba', paso: 3 },
 ];
@@ -546,8 +546,7 @@ function clasificarMano(lm) {
   if (cuantos === 0) return pulgarArriba ? 'La' : 'Re';
   if (dedos[0] && !dedos[1] && !dedos[2] && !dedos[3]) return 'Mi';
   if (dedos[0] && dedos[1] && !dedos[2] && !dedos[3]) return 'Sol';
-  if (dedos[0] && dedos[1] && dedos[2] && !dedos[3]) return 'Fa';      // tres dedos
-  if (dedos[0] && !dedos[1] && !dedos[2] && dedos[3]) return 'Fa';     // 🤟 índice y meñique
+  if (dedos[0] && !dedos[1] && !dedos[2] && dedos[3]) return 'Fa';     // 🤟 pulgar, índice y meñique
   return null;
 }
 
