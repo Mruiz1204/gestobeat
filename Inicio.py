@@ -33,6 +33,7 @@ with st.sidebar:
     st.markdown("### Modelo de gestos")
     modelo_url = st.text_input(
         "Enlace de Teachable Machine",
+        value="https://teachablemachine.withgoogle.com/models/0SuhMwLNA/",
         placeholder="https://teachablemachine.withgoogle.com/models/…/",
         help="En Teachable Machine: Exportar modelo → Tensorflow.js → Subir mi modelo. "
              "Si lo dejas vacío, la app busca el modelo en la carpeta componente/modelo del repositorio.",
