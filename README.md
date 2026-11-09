@@ -12,7 +12,7 @@ en Wokwi enciende el LED de cada nota y la toca en su buzzer.
 | ✊ puño | Re | naranja (GPIO 12) |
 | ☝️ un dedo | Mi | amarillo (GPIO 14) |
 | ✌️ dos dedos | Sol | verde (GPIO 27) |
-| 👍 pulgar arriba | La | azul (GPIO 26) |
+| 👍 pulgar arriba | La | morado (GPIO 26) |
 
 ## Modalidades
 

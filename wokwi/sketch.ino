@@ -11,7 +11,7 @@
     LED Re  (naranja)  → GPIO 12
     LED Mi  (amarillo) → GPIO 14
     LED Sol (verde)    → GPIO 27
-    LED La  (azul)     → GPIO 26
+    LED La  (morado)   → GPIO 26
     Buzzer             → GPIO 25
 */
 
