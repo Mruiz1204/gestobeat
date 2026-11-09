@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-NOTAS = {"Do": "#e8413c", "Re": "#f5922f", "Mi": "#f7d23e", "Sol": "#3fb56a", "La": "#8e5cd9"}
+NOTAS = {"Do": "#e8413c", "Re": "#f5922f", "Mi": "#f7d23e", "Fa": "#9ccc3c", "Sol": "#2a9d6f", "La": "#8e5cd9"}
 
 CSS = """
 <style>
@@ -73,7 +73,7 @@ def aplicar():
 
 
 def marca(descripcion):
-    barras = "".join(f'<i style="height:{100 - i * 12}%;background:{c}"></i>' for i, c in enumerate(NOTAS.values()))
+    barras = "".join(f'<i style="height:{100 - i * 11}%;background:{c}"></i>' for i, c in enumerate(NOTAS.values()))
     st.markdown(f"""
     <div class="marca">
       <div class="logo"><div class="barras">{barras}</div><h1>GestoBeat</h1></div>

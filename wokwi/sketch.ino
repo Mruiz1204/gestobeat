@@ -10,6 +10,7 @@
     LED Do  (rojo)     → GPIO 13
     LED Re  (naranja)  → GPIO 12
     LED Mi  (amarillo) → GPIO 14
+    LED Fa  (lima)     → GPIO 33
     LED Sol (verde)    → GPIO 27
     LED La  (morado)   → GPIO 26
     Buzzer             → GPIO 25
@@ -25,9 +26,9 @@ const char* mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 1883;
 const char* topico = "gestobeat_miguelruiz";
 
-const char* NOMBRES[5] = {"Do", "Re", "Mi", "Sol", "La"};
-const int LEDS[5] = {13, 12, 14, 27, 26};
-const int FRECUENCIAS[5] = {523, 587, 659, 784, 880};   // Do5, Re5, Mi5, Sol5, La5
+const char* NOMBRES[6] = {"Do", "Re", "Mi", "Fa", "Sol", "La"};
+const int LEDS[6] = {13, 12, 14, 33, 27, 26};
+const int FRECUENCIAS[6] = {523, 587, 659, 698, 784, 880};   // Do5, Re5, Mi5, Fa5, Sol5, La5
 const int BUZZER = 25;
 const unsigned long DURACION = 220;                      // ms que dura cada nota
 
@@ -56,7 +57,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   const char* nota = doc["nota"] | "";
   const char* instrumento = doc["instrumento"] | "-";
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 6; i++) {
     if (strcasecmp(nota, NOMBRES[i]) == 0) {
       tocarNota(i);
       notasRecibidas++;
@@ -94,11 +95,11 @@ void reconectar() {
 
 void setup() {
   Serial.begin(115200);
-  for (int i = 0; i < 5; i++) pinMode(LEDS[i], OUTPUT);
+  for (int i = 0; i < 6; i++) pinMode(LEDS[i], OUTPUT);
   pinMode(BUZZER, OUTPUT);
 
   // Saludo: recorre las cinco notas
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 6; i++) {
     digitalWrite(LEDS[i], HIGH);
     tone(BUZZER, FRECUENCIAS[i], 120);
     delay(150);

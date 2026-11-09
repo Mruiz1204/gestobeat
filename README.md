@@ -11,6 +11,7 @@ en Wokwi enciende el LED de cada nota y la toca en su buzzer.
 | ✋ mano abierta | Do | rojo (GPIO 13) |
 | ✊ puño | Re | naranja (GPIO 12) |
 | ☝️ un dedo | Mi | amarillo (GPIO 14) |
+| 🤟 tres dedos | Fa | verde limón (GPIO 33) |
 | ✌️ dos dedos | Sol | verde (GPIO 27) |
 | 👍 pulgar arriba | La | morado (GPIO 26) |
 
@@ -19,9 +20,9 @@ en Wokwi enciende el LED de cada nota y la toca en su buzzer.
 | Modalidad | Tipo | Tecnología |
 |---|---|---|
 | Gestos de la mano | Entrada | Detector de mano MediaPipe Hands (21 puntos, cuenta los dedos) o el modelo de Teachable Machine con TensorFlow.js |
-| Tablero y teclado | Entrada | Franjas táctiles y teclas 1–5 |
+| Tablero y teclado | Entrada | Barras táctiles y teclas 1–6 |
 | Voz | Entrada | Web Speech API («piano», «guitarra», «marimba», «juego», «escuchar», «do re mi»…) |
-| Sonido | Salida | Tone.js, escala pentatónica |
+| Sonido | Salida | Tone.js, escala de Do (Do, Re, Mi, Fa, Sol, La) |
 | Pantalla | Salida | Streamlit + componente propio |
 | Luces y buzzer | Salida | ESP32 en Wokwi por MQTT (`{"nota": "Mi", "instrumento": "piano"}`) |
 

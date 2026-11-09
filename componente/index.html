@@ -14,7 +14,7 @@
 <style>
   :root {
     --tinta: #1a1838; --escenario: #221f47; --panel: #2a2754; --linea: #3d3970; --texto: #f4f2ff; --suave: #aba6d3;
-    --do: #e8413c; --re: #f5922f; --mi: #f7d23e; --sol: #3fb56a; --la: #8e5cd9;
+    --do: #e8413c; --re: #f5922f; --mi: #f7d23e; --fa: #9ccc3c; --sol: #2a9d6f; --la: #8e5cd9;
     --display: 'Bricolage Grotesque', 'Segoe UI', sans-serif; --cuerpo: 'Atkinson Hyperlegible', 'Segoe UI', sans-serif;
   }
   * { box-sizing: border-box; }
@@ -59,7 +59,7 @@
   .principal:hover { background: #fff; }
   .secundario { background: none; border: 1px solid var(--linea); border-radius: 999px; padding: 9px 18px; font-weight: 700; }
   .secundario:hover { border-color: var(--suave); }
-  .gestos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 14px; }
+  .gestos { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 14px; }
   .gesto { text-align: center; padding: 8px 2px 6px; border-radius: 12px; }
   .gesto span { font-size: 1.5rem; display: block; line-height: 1.2; }
   .gesto b { font-family: var(--display); font-size: 0.95rem; }
@@ -88,7 +88,7 @@
   .estado .espera i { background: var(--mi); } .estado .error i { background: var(--do); }
 
   /* ── xilófono ── */
-  .xilofono { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; align-items: end; height: 250px; margin-top: 18px;
+  .xilofono { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; align-items: end; height: 250px; margin-top: 18px;
               user-select: none; touch-action: none; }
   .barra { position: relative; border-radius: 14px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
            padding-bottom: 16px; color: var(--tinta); cursor: pointer; transition: transform .07s, filter .07s, box-shadow .07s;
@@ -99,8 +99,8 @@
   .barra b { font-family: var(--display); font-weight: 800; font-size: 1.7rem; line-height: 1; }
   .barra small { font-size: 0.78rem; opacity: 0.7; margin-top: 4px; }
   .barra.golpe { transform: translateY(4px); filter: brightness(1.18); box-shadow: 0 0 34px -2px currentColor, inset 0 -2px 0 rgba(0,0,0,0.16); }
-  .barra:nth-child(1) { height: 100%; } .barra:nth-child(2) { height: 91%; } .barra:nth-child(3) { height: 82%; }
-  .barra:nth-child(4) { height: 73%; } .barra:nth-child(5) { height: 64%; }
+  .barra:nth-child(1) { height: 100%; } .barra:nth-child(2) { height: 92%; } .barra:nth-child(3) { height: 84%; }
+  .barra:nth-child(4) { height: 76%; } .barra:nth-child(5) { height: 68%; } .barra:nth-child(6) { height: 60%; }
   .ayuda-teclas { text-align: center; color: var(--suave); font-size: 0.85rem; margin-top: 10px; }
 
   /* ── juego ── */
@@ -128,7 +128,7 @@
   .portada .mini { display: flex; gap: 10px; justify-content: center; align-items: end; height: 120px; margin-bottom: 26px; }
   .portada .mini i { width: 30px; border-radius: 8px; transform-origin: bottom; animation: crecer .7s cubic-bezier(.2,.9,.3,1.3) backwards; }
   .portada .mini i:nth-child(2) { animation-delay: .08s; } .portada .mini i:nth-child(3) { animation-delay: .16s; }
-  .portada .mini i:nth-child(4) { animation-delay: .24s; } .portada .mini i:nth-child(5) { animation-delay: .32s; }
+  .portada .mini i:nth-child(4) { animation-delay: .24s; } .portada .mini i:nth-child(5) { animation-delay: .32s; } .portada .mini i:nth-child(6) { animation-delay: .4s; }
   @keyframes crecer { from { transform: scaleY(0); } }
   .portada h1 { font-family: var(--display); font-weight: 800; font-size: 3.4rem; letter-spacing: -0.03em; margin: 0; line-height: 1; }
   .portada p { color: var(--suave); max-width: 400px; margin: 14px auto 24px; font-size: 1.05rem; }
@@ -140,9 +140,9 @@
 
   <div class="portada" id="portada">
     <div>
-      <div class="mini"><i style="height:100%;background:var(--do)"></i><i style="height:88%;background:var(--re)"></i><i style="height:76%;background:var(--mi)"></i><i style="height:64%;background:var(--sol)"></i><i style="height:52%;background:var(--la)"></i></div>
+      <div class="mini"><i style="height:100%;background:var(--do)"></i><i style="height:88%;background:var(--re)"></i><i style="height:76%;background:var(--mi)"></i><i style="height:66%;background:var(--fa)"></i><i style="height:55%;background:var(--sol)"></i><i style="height:44%;background:var(--la)"></i></div>
       <h1>Tu mano es el instrumento</h1>
-      <p>Toca con gestos frente a la cámara, con las barras, con las teclas 1 a 5 o con la voz. Todo lo que suene va a estar afinado.</p>
+      <p>Toca con gestos frente a la cámara, con las barras, con las teclas 1 a 6 o con la voz. Todo lo que suene va a estar afinado.</p>
       <button class="principal" id="btnEmpezar">Empezar a tocar</button>
     </div>
   </div>
@@ -218,7 +218,7 @@
   </section>
 
   <div class="xilofono" id="xilofono"></div>
-  <div class="ayuda-teclas" id="vozTexto">También puedes usar las teclas 1 a 5.</div>
+  <div class="ayuda-teclas" id="vozTexto">También puedes usar las teclas 1 a 6.</div>
 </div>
 
 <script>
@@ -227,14 +227,15 @@ const NOTAS = [
   { n: 'Do',  f: 'C4', color: '#e8413c', tecla: '1', gesto: '✋', desc: 'mano abierta', paso: -2 },
   { n: 'Re',  f: 'D4', color: '#f5922f', tecla: '2', gesto: '✊', desc: 'puño',         paso: -1 },
   { n: 'Mi',  f: 'E4', color: '#f7d23e', tecla: '3', gesto: '☝️', desc: 'un dedo',      paso: 0 },
-  { n: 'Sol', f: 'G4', color: '#3fb56a', tecla: '4', gesto: '✌️', desc: 'dos dedos',    paso: 2 },
-  { n: 'La',  f: 'A4', color: '#8e5cd9', tecla: '5', gesto: '👍', desc: 'pulgar arriba', paso: 3 },
+  { n: 'Fa',  f: 'F4', color: '#9ccc3c', tecla: '4', gesto: '🤟', desc: 'tres dedos',   paso: 1 },
+  { n: 'Sol', f: 'G4', color: '#2a9d6f', tecla: '5', gesto: '✌️', desc: 'dos dedos',    paso: 2 },
+  { n: 'La',  f: 'A4', color: '#8e5cd9', tecla: '6', gesto: '👍', desc: 'pulgar arriba', paso: 3 },
 ];
-const TECLAS = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, a: 0, s: 1, d: 2, f: 3, g: 4 };
+const TECLAS = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, a: 0, s: 1, d: 2, f: 3, g: 4, h: 5 };
 const MELODIAS = [
-  { nombre: 'La escalera', notas: ['Do', 'Re', 'Mi', 'Sol', 'La', 'Sol', 'Mi'] },
+  { nombre: 'La escalera', notas: ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Sol'] },
   { nombre: 'Campanitas',  notas: ['Mi', 'Re', 'Do', 'Re', 'Mi', 'Mi', 'Mi'] },
-  { nombre: 'Estrellita',  notas: ['Do', 'Do', 'Sol', 'Sol', 'La', 'La', 'Sol'] },
+  { nombre: 'Estrellita',  notas: ['Do', 'Do', 'Sol', 'Sol', 'La', 'La', 'Sol', 'Fa', 'Fa', 'Mi', 'Mi', 'Re', 'Re', 'Do'] },
 ];
 const INSTRUMENTOS = { piano: 'Piano', guitarra: 'Guitarra', marimba: 'Marimba' };
 const ORIGEN = { gesto: 'con un gesto', tablero: 'en las barras', teclado: 'con el teclado', voz: 'con la voz' };
@@ -483,7 +484,7 @@ const usaMano = () => (args.reconocimiento || 'mano') === 'mano';
 function normalizar(t) { return t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 function notaDeEtiqueta(et, i) {
   const n = normalizar(et);
-  const m = n.match(/\b(do|re|mi|sol|la)\b/);
+  const m = n.match(/\b(do|re|mi|fa|sol|la)\b/);
   if (m) return m[1][0].toUpperCase() + m[1].slice(1);
   if (/nada|fondo|background|ninguno|vacio|neutral/.test(n)) return null;
   return i < NOTAS.length ? NOTAS[i].n : null;
@@ -545,6 +546,7 @@ function clasificarMano(lm) {
   if (cuantos === 0) return pulgarArriba ? 'La' : 'Re';
   if (dedos[0] && !dedos[1] && !dedos[2] && !dedos[3]) return 'Mi';
   if (dedos[0] && dedos[1] && !dedos[2] && !dedos[3]) return 'Sol';
+  if (dedos[0] && dedos[1] && dedos[2] && !dedos[3]) return 'Fa';
   return null;
 }
 
@@ -633,7 +635,7 @@ async function predecir() {
     let im = 0; probs.forEach((p, i) => { if (p > probs[im]) im = i; });
     const nota = mapaNotas[im], p = probs[im];
     const umbral = Number(args.umbral) || 0.8;
-    const porNota = [0, 0, 0, 0, 0];
+    const porNota = NOTAS.map(() => 0);
     probs.forEach((q, i) => { const n = mapaNotas[i]; if (n) porNota[porNombre[n]] = Math.max(porNota[porNombre[n]], q); });
     pintarBarrasGesto(porNota);
     if (nota && p >= umbral) gestoDetectado(nota, p, false);
@@ -667,7 +669,7 @@ function gestoDetectado(nota, conf, sinMano) {
     }
   } else {
     candidato = null; estable = 0; sinGesto++;
-    if (usaMano()) pintarBarrasGesto([0, 0, 0, 0, 0]);
+    if (usaMano()) pintarBarrasGesto(NOTAS.map(() => 0));
     $('lectura').textContent = sinMano ? 'Muestra tu mano' : 'Gesto no reconocido';
     if ((sinMano && sinGesto >= 2) || sinGesto >= 5) ultimoGesto = null;
   }
@@ -688,7 +690,7 @@ function comandoDeVoz(texto) {
   if (/libre/.test(t)) return cambiarModo('libre');
   if (/escuch|repite|otra vez/.test(t)) { if (modo !== 'juego') cambiarModo('juego'); return escuchar(); }
   if (/siguiente|otra melodia/.test(t)) return $('btnSiguiente').click();
-  const notas = t.split(/\s+/).map(w => ({ do: 'Do', re: 'Re', mi: 'Mi', sol: 'Sol', la: 'La' })[w]);
+  const notas = t.split(/\s+/).map(w => ({ do: 'Do', re: 'Re', mi: 'Mi', fa: 'Fa', sol: 'Sol', la: 'La' })[w]);
   if (notas.length && notas.every(Boolean)) notas.forEach((n, i) => setTimeout(() => tocar(n, 'voz'), i * 380));
 }
 function alternarVoz() {
@@ -706,7 +708,7 @@ function alternarVoz() {
     rec.onend = () => { if (vozActiva) { try { rec.start(); } catch (e) {} } else estado('stVoz', ''); };
     rec.start(); estado('stVoz', 'on');
     $('vozTexto').textContent = 'Di «guitarra», «juego», «escuchar» o una nota, como «do mi sol».';
-  } else { rec && rec.stop(); estado('stVoz', ''); $('vozTexto').textContent = 'También puedes usar las teclas 1 a 5.'; }
+  } else { rec && rec.stop(); estado('stVoz', ''); $('vozTexto').textContent = 'También puedes usar las teclas 1 a 6.'; }
 }
 $('btnVoz').onclick = alternarVoz;
 
