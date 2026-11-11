@@ -60,7 +60,6 @@ section[data-testid="stSidebar"] hr { border-color: var(--linea); margin: 1rem 0
 [data-testid="stExpander"] details { background: var(--escenario); border: 1px solid var(--linea) !important; border-radius: 16px; }
 [data-testid="stExpander"] summary { font-weight: 700; font-size: 1rem; }
 [data-testid="stExpander"] summary:hover { color: #f7d23e; }
-[data-testid="stToolbar"] { display: none; }
 [data-testid="stExpander"] li, [data-testid="stExpander"] p { color: #dcd9f2; line-height: 1.6; }
 .stMarkdown code { background: var(--panel); color: var(--texto); border-radius: 6px; padding: 1px 6px; }
 .pie { margin-top: 40px; color: var(--suave); font-size: 0.85rem; }
