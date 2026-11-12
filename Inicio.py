@@ -40,7 +40,7 @@ with st.sidebar:
     reconocimiento = "mano" if forma == "Detector de mano" else "modelo"
     modelo_url = st.text_input(
         "Enlace de Teachable Machine",
-        value="https://teachablemachine.withgoogle.com/models/0cq29_e5i/",
+        value="https://teachablemachine.withgoogle.com/models/jA7IiwMuV/",
         placeholder="https://teachablemachine.withgoogle.com/models/…/", disabled=reconocimiento == "mano",
         help="En Teachable Machine: Exportar modelo → Tensorflow.js → Subir mi modelo. "
              "Si lo dejas vacío, la app busca el modelo en la carpeta componente/modelo del repositorio.",
